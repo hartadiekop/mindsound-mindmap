@@ -178,6 +178,22 @@
       border: none;
     }
 
+    /* Desktop - Sidebar visible */
+    @media (min-width: 769px) {
+      .sidebar {
+        display: flex !important;
+        position: relative;
+        transform: none;
+        width: 320px;
+        flex-shrink: 0;
+      }
+
+      #sidebarToggle {
+        display: none !important;
+      }
+    }
+
+    /* Mobile - Sidebar hidden by default */
     @media (max-width: 768px) {
       .sidebar {
         transform: translateX(-100%);
