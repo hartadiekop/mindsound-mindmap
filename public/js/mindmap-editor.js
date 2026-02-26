@@ -400,7 +400,6 @@ function drawNode(node, isSelected) {
   const textTotalHeight = lines.length * lineHeight;
 
   // Calculate total content height: icon + spacing + text lines
-  const iconSize = fontSize;
   const iconSpacing = 8;
   const totalContentHeight = iconSize + iconSpacing + textTotalHeight;
 
@@ -757,7 +756,6 @@ function drawNodeOnContext(context, node) {
   const textTotalHeight = lines.length * lineHeight;
 
   // Calculate total content height: icon + spacing + text lines
-  const iconSize = fontSize;
   const iconSpacing = 8;
   const totalContentHeight = iconSize + iconSpacing + textTotalHeight;
 
