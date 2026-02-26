@@ -227,6 +227,136 @@
         max-width: 350px;
       }
     }
+
+    /* Kanban Board Styles */
+    .kanban-column {
+      background: #f5f5f5;
+      border-radius: 8px;
+      padding: 12px;
+      min-width: 300px;
+      max-width: 300px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .kanban-column-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #ddd;
+    }
+
+    .kanban-column-title {
+      font-weight: bold;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .kanban-column-count {
+      background: #ddd;
+      color: #666;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .kanban-cards {
+      flex: 1;
+      min-height: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .kanban-card {
+      background: white;
+      border-radius: 6px;
+      padding: 12px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      cursor: grab;
+      border-left: 4px solid #667eea;
+      transition: all 0.2s;
+    }
+
+    .kanban-card:hover {
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .kanban-card:active {
+      cursor: grabbing;
+      opacity: 0.8;
+    }
+
+    .kanban-card-title {
+      font-weight: 500;
+      font-size: 13px;
+      color: #333;
+      margin-bottom: 6px;
+      word-break: break-word;
+    }
+
+    .kanban-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+    }
+
+    .kanban-card-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .kanban-card-actions button {
+      background: none;
+      border: none;
+      color: #999;
+      cursor: pointer;
+      padding: 2px 4px;
+      transition: color 0.2s;
+    }
+
+    .kanban-card-actions button:hover {
+      color: #667eea;
+    }
+
+    .kanban-column-add-card {
+      background: rgba(102, 126, 234, 0.1);
+      border: 2px dashed #667eea;
+      border-radius: 6px;
+      padding: 8px;
+      text-align: center;
+      cursor: pointer;
+      color: #667eea;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .kanban-column-add-card:hover {
+      background: rgba(102, 126, 234, 0.2);
+    }
+
+    .kanban-column-delete {
+      background: #fee;
+      color: #c00;
+      border: none;
+      padding: 2px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      transition: all 0.2s;
+    }
+
+    .kanban-column-delete:hover {
+      background: #fdd;
+    }
   </style>
 </head>
 <body>
@@ -330,6 +460,11 @@
         <button id="deleteNodeBtn" class="w-full mt-4 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition">
           <i class="fas fa-trash mr-2"></i>Delete Node
         </button>
+
+        <!-- Kanban Board Button -->
+        <button id="openKanbanBtn" class="w-full mt-4 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded transition">
+          <i class="fas fa-tasks mr-2"></i>Kanban Board
+        </button>
       </div>
 
       <!-- Canvas Controls Panel -->
@@ -345,7 +480,28 @@
     </div>
   </div>
 
-  <!-- Emoji Picker Modal -->
+  <!-- Kanban Board Modal -->
+  <div id="kanbanModal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full h-5/6 max-w-6xl flex flex-col">
+      <!-- Kanban Header -->
+      <div class="flex justify-between items-center p-6 border-b">
+        <h2 class="text-2xl font-bold text-gray-800">Kanban Board</h2>
+        <button onclick="closeKanbanModal()" class="text-gray-500 hover:text-gray-700 text-2xl">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <!-- Kanban Board Content -->
+      <div id="kanbanBoardContent" class="flex-1 overflow-x-auto p-4 bg-gray-100"></div>
+
+      <!-- Add Column Button -->
+      <div class="p-4 flex justify-center">
+        <button onclick="addKanbanColumn()" class="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition">
+          <i class="fas fa-plus mr-2"></i>Add Column
+        </button>
+      </div>
+    </div>
+  </div>
   <div id="emojiModal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full">
       <h3 class="text-xl font-bold text-gray-800 mb-4">Select Emoji</h3>

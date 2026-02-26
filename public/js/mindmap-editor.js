@@ -53,6 +53,19 @@ async function initializeEditor() {
     currentMindmap = data.mindmap;
     currentProject = projectId;
 
+    // Initialize kanban for all nodes that don't have it
+    currentMindmap.nodes.forEach(node => {
+      if (!node.kanban) {
+        node.kanban = {
+          columns: [
+            { id: 'col-todo', title: 'To Do', cards: [] },
+            { id: 'col-inprogress', title: 'In Progress', cards: [] },
+            { id: 'col-done', title: 'Done', cards: [] }
+          ]
+        };
+      }
+    });
+
     document.getElementById('mindmapTitle').textContent = currentMindmap.name;
 
     canvas = document.getElementById('canvas');
@@ -486,8 +499,7 @@ function setupUIListeners() {
     document.getElementById('emojiModal').classList.remove('hidden');
   });
   document.getElementById('autoColorBtn').addEventListener('click', autoColorNode);
-
-  // Keyboard shortcuts
+  document.getElementById('openKanbanBtn').addEventListener('click', openKanbanBoard);
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       // Close sidebar
@@ -500,6 +512,7 @@ function setupUIListeners() {
       // Close modals
       document.getElementById('emojiModal').classList.add('hidden');
       document.getElementById('exportModal').classList.add('hidden');
+      document.getElementById('kanbanModal').classList.add('hidden');
     }
   });
 }
@@ -515,7 +528,14 @@ function addNode() {
     icon: '💡',
     notes: '',
     parentId: selectedNode ? selectedNode.id : null,
-    children: []
+    children: [],
+    kanban: {
+      columns: [
+        { id: 'col-todo', title: 'To Do', cards: [] },
+        { id: 'col-inprogress', title: 'In Progress', cards: [] },
+        { id: 'col-done', title: 'Done', cards: [] }
+      ]
+    }
   };
 
   currentMindmap.nodes.push(newNode);
@@ -576,6 +596,17 @@ function autoColorNode() {
 
 function updateSidebar() {
   if (selectedNode) {
+    // Initialize kanban if it doesn't exist
+    if (!selectedNode.kanban) {
+      selectedNode.kanban = {
+        columns: [
+          { id: 'col-todo', title: 'To Do', cards: [] },
+          { id: 'col-inprogress', title: 'In Progress', cards: [] },
+          { id: 'col-done', title: 'Done', cards: [] }
+        ]
+      };
+    }
+    
     document.getElementById('nodeText').value = selectedNode.text || '';
     document.getElementById('nodeColor').value = selectedNode.color || '#3B82F6';
     document.getElementById('fontSize').value = selectedNode.fontSize || 16;
@@ -583,6 +614,7 @@ function updateSidebar() {
     document.getElementById('nodeNotes').value = selectedNode.notes || '';
     document.getElementById('selectEmojiBtn').textContent = selectedNode.icon || '💡';
     document.getElementById('deleteNodeBtn').style.display = selectedNode === currentMindmap.nodes[0] ? 'none' : 'block';
+    document.getElementById('openKanbanBtn').style.display = 'block';
   } else {
     document.getElementById('nodeText').value = '';
     document.getElementById('nodeColor').value = '#3B82F6';
@@ -590,6 +622,7 @@ function updateSidebar() {
     document.getElementById('fontSizeDisplay').textContent = '16px';
     document.getElementById('nodeNotes').value = '';
     document.getElementById('deleteNodeBtn').style.display = 'none';
+    document.getElementById('openKanbanBtn').style.display = 'none';
   }
 }
 
@@ -792,6 +825,193 @@ function drawNodeOnContext(context, node) {
   for (const line of lines) {
     context.fillText(line, x + r, textStartY);
     textStartY += lineHeight;
+  }
+}
+
+// Kanban Board Functions
+function openKanbanBoard() {
+  if (!selectedNode) return;
+  
+  // Initialize kanban if it doesn't exist
+  if (!selectedNode.kanban) {
+    selectedNode.kanban = {
+      columns: [
+        { id: 'col-todo', title: 'To Do', cards: [] },
+        { id: 'col-inprogress', title: 'In Progress', cards: [] },
+        { id: 'col-done', title: 'Done', cards: [] }
+      ]
+    };
+  }
+  
+  renderKanbanBoard();
+  document.getElementById('kanbanModal').classList.remove('hidden');
+}
+
+function closeKanbanModal() {
+  document.getElementById('kanbanModal').classList.add('hidden');
+}
+
+function renderKanbanBoard() {
+  if (!selectedNode || !selectedNode.kanban) return;
+  
+  const boardContent = document.getElementById('kanbanBoardContent');
+  boardContent.innerHTML = '';
+  
+  selectedNode.kanban.columns.forEach(column => {
+    const columnEl = document.createElement('div');
+    columnEl.className = 'kanban-column';
+    columnEl.id = `kanban-col-${column.id}`;
+    
+    // Column header
+    const headerEl = document.createElement('div');
+    headerEl.className = 'kanban-column-header';
+    headerEl.innerHTML = `
+      <span class="kanban-column-title">${column.title}</span>
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <span class="kanban-column-count">${column.cards.length}</span>
+        <button class="kanban-column-delete" onclick="deleteKanbanColumn('${column.id}')">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    `;
+    columnEl.appendChild(headerEl);
+    
+    // Cards container
+    const cardsEl = document.createElement('div');
+    cardsEl.className = 'kanban-cards';
+    cardsEl.id = `kanban-cards-${column.id}`;
+    
+    column.cards.forEach(card => {
+      const cardEl = document.createElement('div');
+      cardEl.className = 'kanban-card';
+      cardEl.draggable = true;
+      cardEl.dataset.cardId = card.id;
+      cardEl.dataset.columnId = column.id;
+      
+      cardEl.innerHTML = `
+        <div class="kanban-card-title">${card.title}</div>
+        <div class="kanban-card-footer">
+          <span style="color: #999;">${card.id.substring(0, 8)}</span>
+          <div class="kanban-card-actions">
+            <button onclick="event.stopPropagation(); deleteKanbanCard('${column.id}', '${card.id}')" title="Delete">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      `;
+      
+      // Drag and drop
+      cardEl.addEventListener('dragstart', (e) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('cardId', card.id);
+        e.dataTransfer.setData('sourceColumnId', column.id);
+      });
+      
+      cardsEl.appendChild(cardEl);
+    });
+    
+    // Add card button
+    const addCardEl = document.createElement('div');
+    addCardEl.className = 'kanban-column-add-card';
+    addCardEl.innerHTML = '<i class="fas fa-plus"></i> Add Card';
+    addCardEl.onclick = () => addKanbanCard(column.id);
+    cardsEl.appendChild(addCardEl);
+    
+    // Allow dropping cards
+    cardsEl.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      cardsEl.style.backgroundColor = 'rgba(102, 126, 234, 0.1)';
+    });
+    
+    cardsEl.addEventListener('dragleave', (e) => {
+      if (e.target === cardsEl) {
+        cardsEl.style.backgroundColor = '';
+      }
+    });
+    
+    cardsEl.addEventListener('drop', (e) => {
+      e.preventDefault();
+      cardsEl.style.backgroundColor = '';
+      
+      const cardId = e.dataTransfer.getData('cardId');
+      const sourceColumnId = e.dataTransfer.getData('sourceColumnId');
+      moveKanbanCard(sourceColumnId, column.id, cardId);
+    });
+    
+    columnEl.appendChild(cardsEl);
+    boardContent.appendChild(columnEl);
+  });
+}
+
+function addKanbanCard(columnId) {
+  if (!selectedNode || !selectedNode.kanban) return;
+  
+  const title = prompt('Enter card title:');
+  if (!title) return;
+  
+  const column = selectedNode.kanban.columns.find(c => c.id === columnId);
+  if (column) {
+    column.cards.push({
+      id: `card-${Date.now()}`,
+      title: title
+    });
+    renderKanbanBoard();
+    saveHistory();
+  }
+}
+
+function deleteKanbanCard(columnId, cardId) {
+  if (!selectedNode || !selectedNode.kanban) return;
+  
+  const column = selectedNode.kanban.columns.find(c => c.id === columnId);
+  if (column) {
+    column.cards = column.cards.filter(c => c.id !== cardId);
+    renderKanbanBoard();
+    saveHistory();
+  }
+}
+
+function moveKanbanCard(sourceColumnId, targetColumnId, cardId) {
+  if (!selectedNode || !selectedNode.kanban) return;
+  
+  const sourceColumn = selectedNode.kanban.columns.find(c => c.id === sourceColumnId);
+  const targetColumn = selectedNode.kanban.columns.find(c => c.id === targetColumnId);
+  
+  if (sourceColumn && targetColumn) {
+    const card = sourceColumn.cards.find(c => c.id === cardId);
+    if (card) {
+      sourceColumn.cards = sourceColumn.cards.filter(c => c.id !== cardId);
+      targetColumn.cards.push(card);
+      renderKanbanBoard();
+      saveHistory();
+    }
+  }
+}
+
+function addKanbanColumn() {
+  if (!selectedNode || !selectedNode.kanban) return;
+  
+  const title = prompt('Enter column title:');
+  if (!title) return;
+  
+  selectedNode.kanban.columns.push({
+    id: `col-${Date.now()}`,
+    title: title,
+    cards: []
+  });
+  
+  renderKanbanBoard();
+  saveHistory();
+}
+
+function deleteKanbanColumn(columnId) {
+  if (!selectedNode || !selectedNode.kanban) return;
+  
+  if (confirm('Delete this column? (Cards will be lost)')) {
+    selectedNode.kanban.columns = selectedNode.kanban.columns.filter(c => c.id !== columnId);
+    renderKanbanBoard();
+    saveHistory();
   }
 }
 
