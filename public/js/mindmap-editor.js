@@ -230,29 +230,35 @@ function findNodeAtPosition(x, y) {
   return null;
 }
 
-function wrapText(text, maxWidth, fontSize) {
+function wrapText(text, maxWidth, fontSize, context) {
   // Helper function to calculate text lines with wrapping
-  const words = text.split(' ');
-  const lines = [];
-  let currentLine = '';
+  // First, split by newlines to respect user's manual line breaks
+  const manualLines = text.split('\n');
+  const allLines = [];
   
-  for (const word of words) {
-    const testLine = currentLine ? currentLine + ' ' + word : word;
-    const metrics = ctx.measureText(testLine);
+  for (const manualLine of manualLines) {
+    // For each manual line, split by spaces and wrap if too long
+    const words = manualLine.split(' ');
+    let currentLine = '';
     
-    if (metrics.width > maxWidth && currentLine) {
-      lines.push(currentLine);
-      currentLine = word;
-    } else {
-      currentLine = testLine;
+    for (const word of words) {
+      const testLine = currentLine ? currentLine + ' ' + word : word;
+      const metrics = context.measureText(testLine);
+      
+      if (metrics.width > maxWidth && currentLine) {
+        if (currentLine) allLines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    
+    if (currentLine) {
+      allLines.push(currentLine);
     }
   }
   
-  if (currentLine) {
-    lines.push(currentLine);
-  }
-  
-  return lines;
+  return allLines;
 }
 
 function calculateNodeRadius(node) {
@@ -268,19 +274,19 @@ function calculateNodeRadius(node) {
   // Increased significantly to accommodate larger font sizes (up to 40px)
   const minRadius = Math.max(fontSize + 25, 50);
   
-  // Calculate needed width based on text
+  // Count actual lines from newline characters
+  const manualLines = text.split('\n');
+  const manualLineCount = manualLines.length;
+  
+  // Calculate needed width based on longest line
   // Estimate: average character width is about 0.5 * fontSize
   const avgCharWidth = fontSize * 0.5;
-  const maxTextWidth = text.length * avgCharWidth;
-  
-  // Calculate needed height based on potential line wrapping
-  // For multi-line text, we need more vertical space
-  const estimatedLineWidth = fontSize * 8; // About 8-10 characters per line
-  const estimatedLines = Math.ceil(text.length / (estimatedLineWidth / avgCharWidth));
+  const longestLine = Math.max(...manualLines.map(line => line.length));
+  const maxTextWidth = longestLine * avgCharWidth;
   
   // Total height needed: icon + spacing + (text lines * line height)
   const lineHeight = fontSize * 1.2;
-  const totalHeight = iconSize + 10 + (estimatedLines * lineHeight) + basePadding;
+  const totalHeight = iconSize + 10 + (manualLineCount * lineHeight) + basePadding;
   
   // Radius needs to fit both width and height
   const radiusFromWidth = Math.max(maxTextWidth / 2 + basePadding, 35);
@@ -393,7 +399,7 @@ function drawNode(node, isSelected) {
   // Draw multi-line text with wrapping
   ctx.font = `bold ${fontSize - 2}px Arial`;
   const maxTextWidth = r * 1.6; // Text width within circle
-  const lines = wrapText(text, maxTextWidth, fontSize);
+  const lines = wrapText(text, maxTextWidth, fontSize, ctx);
   const lineHeight = (fontSize - 2) * 1.2;
   const totalTextHeight = lines.length * lineHeight;
   let startY = y + r - totalTextHeight / 2 + fontSize / 2;
@@ -740,7 +746,7 @@ function drawNodeOnContext(context, node) {
   // Draw multi-line text with wrapping
   context.font = `bold ${fontSize - 2}px Arial`;
   const maxTextWidth = r * 1.6;
-  const lines = wrapText(text, maxTextWidth, fontSize);
+  const lines = wrapText(text, maxTextWidth, fontSize, context);
   const lineHeight = (fontSize - 2) * 1.2;
   const totalTextHeight = lines.length * lineHeight;
   let startY = y + r - totalTextHeight / 2 + fontSize / 2;
