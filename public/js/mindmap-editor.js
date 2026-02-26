@@ -857,16 +857,24 @@ function renderKanbanBoard() {
   const boardContent = document.getElementById('kanbanBoardContent');
   boardContent.innerHTML = '';
   
-  selectedNode.kanban.columns.forEach(column => {
+  selectedNode.kanban.columns.forEach((column, columnIndex) => {
     const columnEl = document.createElement('div');
     columnEl.className = 'kanban-column';
     columnEl.id = `kanban-col-${column.id}`;
+    columnEl.draggable = true;
+    columnEl.dataset.columnId = column.id;
+    columnEl.dataset.columnIndex = columnIndex;
     
-    // Column header
+    // Column header with drag handle
     const headerEl = document.createElement('div');
     headerEl.className = 'kanban-column-header';
     headerEl.innerHTML = `
-      <span class="kanban-column-title">${column.title}</span>
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <span class="kanban-column-drag-handle" title="Drag to reorder">
+          <i class="fas fa-ellipsis-v"></i>
+        </span>
+        <span class="kanban-column-title">${column.title}</span>
+      </div>
       <div style="display: flex; gap: 6px; align-items: center;">
         <span class="kanban-column-count">${column.cards.length}</span>
         <button class="kanban-column-delete" onclick="deleteKanbanColumn('${column.id}')">
@@ -875,6 +883,44 @@ function renderKanbanBoard() {
       </div>
     `;
     columnEl.appendChild(headerEl);
+    
+    // Column drag events
+    columnEl.addEventListener('dragstart', (e) => {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('columnIndex', columnIndex);
+      columnEl.classList.add('dragging');
+    });
+    
+    columnEl.addEventListener('dragend', (e) => {
+      columnEl.classList.remove('dragging');
+      columnEl.classList.remove('drag-over');
+    });
+    
+    columnEl.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      
+      // Check if data is a column (not a card)
+      if (e.dataTransfer.types.includes('columnIndex')) {
+        columnEl.classList.add('drag-over');
+      }
+    });
+    
+    columnEl.addEventListener('dragleave', (e) => {
+      if (e.target === columnEl) {
+        columnEl.classList.remove('drag-over');
+      }
+    });
+    
+    columnEl.addEventListener('drop', (e) => {
+      e.preventDefault();
+      columnEl.classList.remove('drag-over');
+      
+      const sourceIndex = parseInt(e.dataTransfer.getData('columnIndex'));
+      if (!isNaN(sourceIndex) && sourceIndex !== columnIndex) {
+        reorderKanbanColumns(sourceIndex, columnIndex);
+      }
+    });
     
     // Cards container
     const cardsEl = document.createElement('div');
@@ -900,7 +946,7 @@ function renderKanbanBoard() {
         </div>
       `;
       
-      // Drag and drop
+      // Drag and drop for cards
       cardEl.addEventListener('dragstart', (e) => {
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('cardId', card.id);
@@ -919,9 +965,11 @@ function renderKanbanBoard() {
     
     // Allow dropping cards
     cardsEl.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      cardsEl.style.backgroundColor = 'rgba(102, 126, 234, 0.1)';
+      if (e.dataTransfer.types.includes('cardId')) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        cardsEl.style.backgroundColor = 'rgba(102, 126, 234, 0.1)';
+      }
     });
     
     cardsEl.addEventListener('dragleave', (e) => {
@@ -1013,6 +1061,17 @@ function deleteKanbanColumn(columnId) {
     renderKanbanBoard();
     saveHistory();
   }
+}
+
+function reorderKanbanColumns(sourceIndex, targetIndex) {
+  if (!selectedNode || !selectedNode.kanban) return;
+  
+  const columns = selectedNode.kanban.columns;
+  const [movedColumn] = columns.splice(sourceIndex, 1);
+  columns.splice(targetIndex, 0, movedColumn);
+  
+  renderKanbanBoard();
+  saveHistory();
 }
 
 // Initialize
