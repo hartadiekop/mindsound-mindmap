@@ -107,7 +107,13 @@ app.post('/api/login', (req, res) => {
   if (user) {
     req.session.userId = user.id;
     req.session.username = user.username;
-    res.json({ success: true, message: 'Login successful' });
+    // Explicitly save session before responding
+    req.session.save((err) => {
+      if (err) {
+        return res.json({ success: false, message: 'Session error' });
+      }
+      res.json({ success: true, message: 'Login successful' });
+    });
   } else {
     res.json({ success: false, message: 'Invalid credentials' });
   }
