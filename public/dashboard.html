@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mindsound Mindmap - Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+    }
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+    .card-hover:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+    .gradient-icon {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .modal-backdrop {
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+    }
+    .project-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 24px;
+    }
+    @media (max-width: 640px) {
+      .project-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="bg-white shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <i class="fas fa-brain text-3xl gradient-icon"></i>
+        <div>
+          <h1 class="text-2xl font-bold gradient-icon">Mindsound</h1>
+          <p class="text-xs text-gray-500">Mindmap</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <span class="text-gray-700 font-semibold hidden sm:block">
+          <i class="fas fa-user-circle mr-2"></i><span id="username"></span>
+        </span>
+        <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition">
+          <i class="fas fa-sign-out-alt mr-2"></i>Logout
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Header Section -->
+    <div class="mb-12">
+      <h2 class="text-4xl font-bold text-gray-800 mb-2">
+        <i class="fas fa-folder-open mr-3 gradient-icon"></i>Your Workspace
+      </h2>
+      <p class="text-gray-600 mb-6">Manage your projects and mindmaps</p>
+      
+      <!-- Add Project Button -->
+      <button id="createProjectBtn" class="bg-gradient-to-r from-purple-500 to-pink-500 hover:shadow-lg text-white font-bold py-3 px-6 rounded-xl transition-all transform hover:scale-105 inline-flex items-center gap-2">
+        <i class="fas fa-plus"></i>Create New Project
+      </button>
+    </div>
+
+    <!-- Projects Container -->
+    <div id="projectsContainer" class="project-grid">
+      <!-- Projects will be loaded here -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="text-center py-16">
+      <i class="fas fa-inbox text-6xl text-gray-300 mb-4"></i>
+      <p class="text-gray-500 text-xl mb-6">No projects yet</p>
+      <button id="emptyCreateBtn" class="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3 px-8 rounded-xl">
+        <i class="fas fa-plus mr-2"></i>Create Your First Project
+      </button>
+    </div>
+  </div>
+
+  <!-- Create Project Modal -->
+  <div id="projectModal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full">
+      <h3 class="text-2xl font-bold text-gray-800 mb-6">
+        <i class="fas fa-folder-plus mr-2 text-purple-500"></i>Create New Project
+      </h3>
+      <input 
+        type="text" 
+        id="projectName" 
+        placeholder="Project name" 
+        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl mb-6 focus:outline-none focus:border-purple-500"
+      >
+      <div class="flex gap-4">
+        <button id="cancelProjectBtn" class="flex-1 bg-gray-200 text-gray-800 font-bold py-3 rounded-xl hover:bg-gray-300">Cancel</button>
+        <button id="saveProjectBtn" class="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3 rounded-xl hover:shadow-lg">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rename Project Modal -->
+  <div id="renameProjectModal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full">
+      <h3 class="text-2xl font-bold text-gray-800 mb-6">
+        <i class="fas fa-edit mr-2 text-purple-500"></i>Rename Project
+      </h3>
+      <input 
+        type="text" 
+        id="renameProjectInput" 
+        placeholder="New project name" 
+        class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl mb-6 focus:outline-none focus:border-purple-500"
+      >
+      <div class="flex gap-4">
+        <button id="cancelRenameBtn" class="flex-1 bg-gray-200 text-gray-800 font-bold py-3 rounded-xl hover:bg-gray-300">Cancel</button>
+        <button id="saveRenameBtn" class="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3 rounded-xl hover:shadow-lg">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mindsound Mindmap - Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .glass-effect {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .floating-animation {
+      animation: floating 3s ease-in-out infinite;
+    }
+    @keyframes floating {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+    }
+    .input-glow:focus {
+      box-shadow: 0 0 20px rgba(102, 126, 234, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="container mx-auto px-4">
+    <div class="max-w-md mx-auto">
+      <!-- Logo Section -->
+      <div class="text-center mb-8 floating-animation">
+        <div class="inline-block bg-white rounded-full p-6 shadow-2xl mb-6">
+          <i class="fas fa-brain text-4xl gradient-text"></i>
+        </div>
+        <h1 class="text-4xl font-bold text-white mb-2">Mindsound</h1>
+        <p class="text-white text-opacity-80 text-lg">Mindmap</p>
+      </div>
+
+      <!-- Login Card -->
+      <div class="glass-effect rounded-3xl shadow-2xl p-8 mb-6">
+        <div class="mb-8">
+          <h2 class="text-2xl font-bold text-gray-800 mb-2">Welcome Back</h2>
+          <p class="text-gray-600">Visualize your thoughts, organize your ideas</p>
+        </div>
+
+        <form id="loginForm">
+          <!-- Username Input -->
+          <div class="mb-5">
+            <label class="block text-gray-700 text-sm font-semibold mb-3">
+              <i class="fas fa-user mr-2 text-purple-500"></i>Username
+            </label>
+            <input 
+              type="text" 
+              id="username" 
+              name="username" 
+              class="input-glow w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 transition-all"
+              placeholder="Enter your username"
+              required
+            >
+          </div>
+
+          <!-- Password Input -->
+          <div class="mb-8">
+            <label class="block text-gray-700 text-sm font-semibold mb-3">
+              <i class="fas fa-lock mr-2 text-purple-500"></i>Password
+            </label>
+            <input 
+              type="password" 
+              id="password" 
+              name="password" 
+              class="input-glow w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-500 transition-all"
+              placeholder="Enter your password"
+              required
+            >
+          </div>
+
+          <!-- Login Button -->
+          <button 
+            type="submit" 
+            class="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3 rounded-xl hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2"
+          >
+            <i class="fas fa-sign-in-alt"></i>
+            Sign In
+          </button>
+        </form>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="mt-4 p-3 bg-red-100 text-red-700 rounded-lg hidden flex items-center gap-2">
+          <i class="fas fa-exclamation-circle"></i>
+          <span id="errorText"></span>
+        </div>
+
+        <!-- Demo Credentials Info -->
+        <div class="mt-6 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+          <p class="text-sm text-gray-700 font-semibold mb-2">
+            <i class="fas fa-info-circle text-blue-500 mr-2"></i>Demo Credentials
+          </p>
+          <p class="text-xs text-gray-600">
+            Username: <code class="bg-white px-2 py-1 rounded">admin</code> or <code class="bg-white px-2 py-1 rounded">user</code><br>
+            Password: <code class="bg-white px-2 py-1 rounded">admin123</code> or <code class="bg-white px-2 py-1 rounded">user123</code>
+          </p>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="text-center text-white text-opacity-70 text-sm">
+        <p><i class="fas fa-lightbulb mr-2"></i>Transform your ideas into clarity</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const errorDiv = document.getElementById('errorMessage');
+      const errorText = document.getElementById('errorText');
+
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          window.location.href = '/';
+        } else {
+          errorText.textContent = data.message;
+          errorDiv.classList.remove('hidden');
+        }
+      } catch (error) {
+        errorText.textContent = 'Connection error. Please try again.';
+        errorDiv.classList.remove('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

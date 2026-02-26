@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mindsound Mindmap - Editor</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #f5f7fa;
+    }
+
+    #canvas {
+      display: block;
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+      cursor: grab;
+    }
+
+    #canvas:active {
+      cursor: grabbing;
+    }
+
+    .toolbar {
+      background: white;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      z-index: 100;
+    }
+
+    .sidebar {
+      background: white;
+      box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+      overflow-y: auto;
+    }
+
+    .sidebar::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .sidebar::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+      background: #ccc;
+      border-radius: 3px;
+    }
+
+    .tool-btn {
+      transition: all 0.2s ease;
+      border-bottom: 3px solid transparent;
+    }
+
+    .tool-btn:hover, .tool-btn.active {
+      background: rgba(102, 126, 234, 0.1);
+      border-bottom-color: #667eea;
+    }
+
+    .color-picker {
+      width: 40px;
+      height: 40px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .emoji-picker {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .emoji-item {
+      text-align: center;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    .emoji-item:hover {
+      background: #f0f0f0;
+      transform: scale(1.2);
+    }
+
+    .modal-backdrop {
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+    }
+
+    .node-label {
+      font-weight: bold;
+      white-space: nowrap;
+      pointer-events: none;
+      user-select: none;
+      text-shadow: 0 0 3px rgba(255, 255, 255, 0.8);
+    }
+
+    .floating-label {
+      position: fixed;
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    .gradient-icon {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .panel {
+      border-top: 1px solid #eee;
+      padding: 16px;
+    }
+
+    .panel-title {
+      font-weight: bold;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .slider {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #ddd;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      cursor: pointer;
+    }
+
+    .slider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      cursor: pointer;
+      border: none;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+        position: absolute;
+        height: 100%;
+        width: 100%;
+        transition: transform 0.3s;
+        z-index: 40;
+      }
+
+      .sidebar.active {
+        transform: translateX(0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Toolbar -->
+  <div class="toolbar p-4 flex flex-wrap gap-2 justify-between items-center">
+    <div class="flex items-center gap-2">
+      <button id="backToProjectBtn" class="text-gray-600 hover:text-gray-800 px-4 py-2 rounded hover:bg-gray-100 transition">
+        <i class="fas fa-arrow-left mr-2"></i>Back
+      </button>
+      <h1 class="text-xl font-bold gradient-icon ml-4" id="mindmapTitle">Editor</h1>
+    </div>
+
+    <div class="flex flex-wrap gap-2 justify-center">
+      <!-- Add Node Button -->
+      <button id="addNodeBtn" class="tool-btn px-4 py-2 rounded hover:bg-gray-100 transition flex items-center gap-2" title="Add node">
+        <i class="fas fa-plus"></i>Add Node
+      </button>
+
+      <!-- Export Button -->
+      <button id="exportBtn" class="tool-btn px-4 py-2 rounded hover:bg-gray-100 transition flex items-center gap-2" title="Export">
+        <i class="fas fa-download"></i>Export
+      </button>
+
+      <!-- Undo/Redo -->
+      <button id="undoBtn" class="px-3 py-2 rounded hover:bg-gray-100 transition" title="Undo">
+        <i class="fas fa-undo"></i>
+      </button>
+      <button id="redoBtn" class="px-3 py-2 rounded hover:bg-gray-100 transition" title="Redo">
+        <i class="fas fa-redo"></i>
+      </button>
+
+      <!-- Save Button -->
+      <button id="saveBtn" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition flex items-center gap-2">
+        <i class="fas fa-save"></i>Save
+      </button>
+    </div>
+
+    <!-- Mobile Menu Toggle -->
+    <button id="sidebarToggle" class="md:hidden px-4 py-2 rounded hover:bg-gray-100 transition">
+      <i class="fas fa-bars"></i>
+    </button>
+  </div>
+
+  <div style="display: flex; height: calc(100vh - 64px);">
+    <!-- Canvas -->
+    <canvas id="canvas" style="flex: 1; background: white; border: 1px solid #eee;"></canvas>
+
+    <!-- Right Sidebar -->
+    <div id="sidebar" class="sidebar w-80 flex flex-col">
+      <!-- Node Properties Panel -->
+      <div class="panel">
+        <div class="panel-title">
+          <i class="fas fa-circle text-purple-500"></i>
+          <span>Node Properties</span>
+        </div>
+
+        <!-- Node Text -->
+        <label class="block text-sm font-semibold text-gray-700 mb-2">
+          <i class="fas fa-text mr-2"></i>Text
+        </label>
+        <input type="text" id="nodeText" class="input-field" placeholder="Enter node text">
+
+        <!-- Node Icon -->
+        <label class="block text-sm font-semibold text-gray-700 mb-2">
+          <i class="fas fa-face-smile mr-2"></i>Icon
+        </label>
+        <button id="selectEmojiBtn" class="w-full px-3 py-2 bg-gray-100 rounded hover:bg-gray-200 transition text-2xl">
+          💡
+        </button>
+
+        <!-- Node Color -->
+        <label class="block text-sm font-semibold text-gray-700 mb-2 mt-4">
+          <i class="fas fa-palette mr-2"></i>Color
+        </label>
+        <div class="flex gap-2 flex-wrap">
+          <input type="color" id="nodeColor" class="color-picker" value="#3B82F6">
+          <button class="px-3 py-2 bg-gray-100 rounded hover:bg-gray-200 transition text-sm" id="autoColorBtn">
+            <i class="fas fa-wand-magic-sparkles mr-1"></i>Auto
+          </button>
+        </div>
+
+        <!-- Font Size -->
+        <label class="block text-sm font-semibold text-gray-700 mb-2 mt-4">
+          <i class="fas fa-text-height mr-2"></i>Font Size
+        </label>
+        <div class="flex items-center gap-2">
+          <input type="range" id="fontSize" class="slider" min="10" max="40" value="16">
+          <span id="fontSizeDisplay" class="text-sm font-bold w-10">16px</span>
+        </div>
+
+        <!-- Node Notes -->
+        <label class="block text-sm font-semibold text-gray-700 mb-2 mt-4">
+          <i class="fas fa-sticky-note mr-2"></i>Notes
+        </label>
+        <textarea id="nodeNotes" class="input-field h-24 resize-none" placeholder="Add notes for this node..."></textarea>
+
+        <!-- Delete Node -->
+        <button id="deleteNodeBtn" class="w-full mt-4 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition">
+          <i class="fas fa-trash mr-2"></i>Delete Node
+        </button>
+      </div>
+
+      <!-- Canvas Controls Panel -->
+      <div class="panel">
+        <div class="panel-title">
+          <i class="fas fa-sliders-h text-blue-500"></i>
+          <span>Canvas</span>
+        </div>
+        <button id="resetViewBtn" class="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition">
+          <i class="fas fa-compress mr-2"></i>Reset View
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Emoji Picker Modal -->
+  <div id="emojiModal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full">
+      <h3 class="text-xl font-bold text-gray-800 mb-4">Select Emoji</h3>
+      <div class="emoji-picker">
+        <div class="emoji-item" onclick="selectEmoji('💡')">💡</div>
+        <div class="emoji-item" onclick="selectEmoji('🎯')">🎯</div>
+        <div class="emoji-item" onclick="selectEmoji('⭐')">⭐</div>
+        <div class="emoji-item" onclick="selectEmoji('💡')">💡</div>
+        <div class="emoji-item" onclick="selectEmoji('🚀')">🚀</div>
+        <div class="emoji-item" onclick="selectEmoji('📝')">📝</div>
+        <div class="emoji-item" onclick="selectEmoji('🎨')">🎨</div>
+        <div class="emoji-item" onclick="selectEmoji('💎')">💎</div>
+        <div class="emoji-item" onclick="selectEmoji('🌟')">🌟</div>
+        <div class="emoji-item" onclick="selectEmoji('🔥')">🔥</div>
+        <div class="emoji-item" onclick="selectEmoji('✨')">✨</div>
+        <div class="emoji-item" onclick="selectEmoji('🎭')">🎭</div>
+        <div class="emoji-item" onclick="selectEmoji('🎪')">🎪</div>
+        <div class="emoji-item" onclick="selectEmoji('🎬')">🎬</div>
+        <div class="emoji-item" onclick="selectEmoji('🎤')">🎤</div>
+        <div class="emoji-item" onclick="selectEmoji('🎵')">🎵</div>
+      </div>
+      <button onclick="closeEmojiModal()" class="w-full mt-4 px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition">Close</button>
+    </div>
+  </div>
+
+  <!-- Export Modal -->
+  <div id="exportModal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full">
+      <h3 class="text-xl font-bold text-gray-800 mb-4">Export Mindmap</h3>
+      <p class="text-gray-600 mb-6">Choose export format:</p>
+      <div class="flex flex-col gap-3">
+        <button onclick="exportAs('png')" class="w-full px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded transition flex items-center justify-center gap-2">
+          <i class="fas fa-file-image"></i>PNG
+        </button>
+        <button onclick="exportAs('jpg')" class="w-full px-4 py-3 bg-green-500 hover:bg-green-600 text-white rounded transition flex items-center justify-center gap-2">
+          <i class="fas fa-file-image"></i>JPG
+        </button>
+        <button onclick="exportAs('json')" class="w-full px-4 py-3 bg-yellow-500 hover:bg-yellow-600 text-white rounded transition flex items-center justify-center gap-2">
+          <i class="fas fa-file-code"></i>JSON
+        </button>
+        <button onclick="closeExportModal()" class="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/mindmap-editor.js"></script>
+</body>
+</html>
