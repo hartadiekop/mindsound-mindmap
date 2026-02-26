@@ -85,6 +85,7 @@ function setupCanvasListeners() {
   canvas.addEventListener('mouseup', handleCanvasMouseUp);
   canvas.addEventListener('mouseout', handleCanvasMouseOut);
   canvas.addEventListener('wheel', handleCanvasWheel);
+  canvas.addEventListener('dblclick', handleCanvasDoubleClick);
 
   // Touch events
   canvas.addEventListener('touchstart', handleTouchStart);
@@ -149,6 +150,25 @@ function handleCanvasMouseUp() {
 function handleCanvasMouseOut() {
   isDrawing = false;
   isDragging = false;
+}
+
+function handleCanvasDoubleClick(e) {
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left - panX) / zoom;
+  const y = (e.clientY - rect.top - panY) / zoom;
+
+  const clickedNode = findNodeAtPosition(x, y);
+  
+  if (clickedNode) {
+    selectedNode = clickedNode;
+    updateSidebar();
+    
+    // Show sidebar
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    sidebar.classList.add('active');
+    backdrop.classList.add('active');
+  }
 }
 
 function handleCanvasWheel(e) {
