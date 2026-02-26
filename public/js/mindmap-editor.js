@@ -873,7 +873,7 @@ function renderKanbanBoard() {
         <span class="kanban-column-drag-handle" title="Drag to reorder">
           <i class="fas fa-ellipsis-v"></i>
         </span>
-        <span class="kanban-column-title">${column.title}</span>
+        <span class="kanban-column-title" style="cursor: pointer; user-select: none;" title="Double-click to edit">${column.title}</span>
       </div>
       <div style="display: flex; gap: 6px; align-items: center;">
         <span class="kanban-column-count">${column.cards.length}</span>
@@ -883,6 +883,13 @@ function renderKanbanBoard() {
       </div>
     `;
     columnEl.appendChild(headerEl);
+    
+    // Add double-click listener to column title
+    const columnTitleEl = headerEl.querySelector('.kanban-column-title');
+    columnTitleEl.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      editKanbanColumnTitle(column.id, columnTitleEl);
+    });
     
     // Column drag events
     columnEl.addEventListener('dragstart', (e) => {
@@ -935,7 +942,7 @@ function renderKanbanBoard() {
       cardEl.dataset.columnId = column.id;
       
       cardEl.innerHTML = `
-        <div class="kanban-card-title">${card.title}</div>
+        <div class="kanban-card-title" style="cursor: pointer; user-select: none;" title="Double-click to edit">${card.title}</div>
         <div class="kanban-card-footer">
           <span style="color: #999;">${card.id.substring(0, 8)}</span>
           <div class="kanban-card-actions">
@@ -945,6 +952,13 @@ function renderKanbanBoard() {
           </div>
         </div>
       `;
+      
+      // Add double-click listener to card title
+      const cardTitleEl = cardEl.querySelector('.kanban-card-title');
+      cardTitleEl.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        editKanbanCardTitle(column.id, card.id, cardTitleEl);
+      });
       
       // Drag and drop for cards
       cardEl.addEventListener('dragstart', (e) => {
@@ -1061,6 +1075,75 @@ function deleteKanbanColumn(columnId) {
     renderKanbanBoard();
     saveHistory();
   }
+}
+
+function editKanbanColumnTitle(columnId, titleElement) {
+  if (!selectedNode || !selectedNode.kanban) return;
+  
+  const column = selectedNode.kanban.columns.find(c => c.id === columnId);
+  if (!column) return;
+  
+  const currentTitle = column.title;
+  const inputEl = document.createElement('input');
+  inputEl.type = 'text';
+  inputEl.value = currentTitle;
+  inputEl.style.cssText = 'padding: 4px 8px; border: 2px solid #667eea; border-radius: 4px; font-weight: bold; font-size: 14px; color: #333; width: 150px;';
+  
+  titleElement.replaceWith(inputEl);
+  inputEl.focus();
+  inputEl.select();
+  
+  const saveEdit = () => {
+    const newTitle = inputEl.value.trim() || currentTitle;
+    column.title = newTitle;
+    renderKanbanBoard();
+    saveHistory();
+  };
+  
+  inputEl.addEventListener('blur', saveEdit);
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      saveEdit();
+    } else if (e.key === 'Escape') {
+      renderKanbanBoard(); // Re-render to show original title
+    }
+  });
+}
+
+function editKanbanCardTitle(columnId, cardId, titleElement) {
+  if (!selectedNode || !selectedNode.kanban) return;
+  
+  const column = selectedNode.kanban.columns.find(c => c.id === columnId);
+  if (!column) return;
+  
+  const card = column.cards.find(c => c.id === cardId);
+  if (!card) return;
+  
+  const currentTitle = card.title;
+  const inputEl = document.createElement('input');
+  inputEl.type = 'text';
+  inputEl.value = currentTitle;
+  inputEl.style.cssText = 'padding: 6px 8px; border: 2px solid #667eea; border-radius: 4px; font-weight: 500; font-size: 13px; color: #333; width: 100%; box-sizing: border-box;';
+  
+  titleElement.replaceWith(inputEl);
+  inputEl.focus();
+  inputEl.select();
+  
+  const saveEdit = () => {
+    const newTitle = inputEl.value.trim() || currentTitle;
+    card.title = newTitle;
+    renderKanbanBoard();
+    saveHistory();
+  };
+  
+  inputEl.addEventListener('blur', saveEdit);
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      saveEdit();
+    } else if (e.key === 'Escape') {
+      renderKanbanBoard(); // Re-render to show original title
+    }
+  });
 }
 
 function reorderKanbanColumns(sourceIndex, targetIndex) {
