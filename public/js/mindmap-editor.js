@@ -125,8 +125,9 @@ function handleCanvasMouseMove(e) {
   const y = (e.clientY - rect.top - panY) / zoom;
 
   if (isDrawing && selectedNode) {
-    selectedNode.x = x - selectedNode.radius;
-    selectedNode.y = y - selectedNode.radius;
+    const radius = calculateNodeRadius(selectedNode);
+    selectedNode.x = x - radius;
+    selectedNode.y = y - radius;
     draw();
   } else if (isDragging) {
     panX += e.clientX - dragStartX;
@@ -194,8 +195,9 @@ function handleTouchMove(e) {
   const y = (e.touches[0].clientY - rect.top - panY) / zoom;
 
   if (isDrawing && selectedNode) {
-    selectedNode.x = x - selectedNode.radius;
-    selectedNode.y = y - selectedNode.radius;
+    const radius = calculateNodeRadius(selectedNode);
+    selectedNode.x = x - radius;
+    selectedNode.y = y - radius;
     draw();
   } else if (isDragging) {
     panX += e.touches[0].clientX - dragStartX;
@@ -218,13 +220,31 @@ function findNodeAtPosition(x, y) {
   // Search from last to first (top layers first)
   for (let i = currentMindmap.nodes.length - 1; i >= 0; i--) {
     const node = currentMindmap.nodes[i];
-    const dx = x - (node.x + node.radius);
-    const dy = y - (node.y + node.radius);
-    if (Math.sqrt(dx * dx + dy * dy) < node.radius) {
+    const nodeRadius = calculateNodeRadius(node);
+    const dx = x - (node.x + nodeRadius);
+    const dy = y - (node.y + nodeRadius);
+    if (Math.sqrt(dx * dx + dy * dy) < nodeRadius) {
       return node;
     }
   }
   return null;
+}
+
+function calculateNodeRadius(node) {
+  // Calculate radius based on font size and text length
+  const basePadding = 15;
+  const fontSize = node.fontSize || 16;
+  const textLength = (node.text || 'Node').length;
+  
+  // Minimum radius based on font size
+  const minRadius = fontSize + 20;
+  
+  // Expand radius based on text length
+  const textWidth = textLength * (fontSize * 0.35); // Approximate character width
+  const requiredRadius = Math.max(minRadius, textWidth / 2 + basePadding);
+  
+  // Ensure minimum of 35px and cap at reasonable size
+  return Math.max(35, Math.min(requiredRadius, 100));
 }
 
 function draw() {
@@ -258,10 +278,13 @@ function draw() {
 }
 
 function drawConnection(parent, child) {
-  const fromX = parent.x + parent.radius;
-  const fromY = parent.y + parent.radius;
-  const toX = child.x + child.radius;
-  const toY = child.y + child.radius;
+  const parentRadius = calculateNodeRadius(parent);
+  const childRadius = calculateNodeRadius(child);
+  
+  const fromX = parent.x + parentRadius;
+  const fromY = parent.y + parentRadius;
+  const toX = child.x + childRadius;
+  const toY = child.y + childRadius;
 
   // Curve color matches parent color
   ctx.strokeStyle = parent.color || '#3B82F6';
@@ -283,7 +306,9 @@ function drawConnection(parent, child) {
 function drawNode(node, isSelected) {
   const x = node.x;
   const y = node.y;
-  const r = node.radius;
+  const r = calculateNodeRadius(node);
+  const fontSize = node.fontSize || 16;
+  const iconSize = fontSize; // Icon size = font size
 
   // Shadow
   ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
@@ -310,20 +335,19 @@ function drawNode(node, isSelected) {
 
   // Draw icon and text
   ctx.fillStyle = 'white';
-  ctx.font = `${node.fontSize}px Arial`;
+  ctx.font = `${iconSize}px Arial`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
   const icon = node.icon || '💡';
   const text = node.text || 'Node';
 
-  // Measure and position text
-  const iconMetrics = ctx.measureText(icon);
-  const textMetrics = ctx.measureText(text);
-
-  ctx.fillText(icon, x + r, y + r - 8);
-  ctx.font = `bold ${node.fontSize - 3}px Arial`;
-  ctx.fillText(text, x + r, y + r + 12);
+  // Draw icon centered
+  ctx.fillText(icon, x + r, y + r - (fontSize / 3));
+  
+  // Draw text below icon
+  ctx.font = `bold ${fontSize - 2}px Arial`;
+  ctx.fillText(text, x + r, y + r + (fontSize / 2.5));
 }
 
 function drawGrid() {
@@ -394,7 +418,6 @@ function addNode() {
     text: 'New Node',
     x: Math.random() * 200 - 100,
     y: Math.random() * 200 - 100,
-    radius: 40,
     color: COLORS[Math.floor(Math.random() * COLORS.length)],
     fontSize: 14,
     icon: '💡',
@@ -604,10 +627,13 @@ function exportAs(format) {
 }
 
 function drawConnectionOnContext(context, parent, child) {
-  const fromX = parent.x + parent.radius;
-  const fromY = parent.y + parent.radius;
-  const toX = child.x + child.radius;
-  const toY = child.y + child.radius;
+  const parentRadius = calculateNodeRadius(parent);
+  const childRadius = calculateNodeRadius(child);
+  
+  const fromX = parent.x + parentRadius;
+  const fromY = parent.y + parentRadius;
+  const toX = child.x + childRadius;
+  const toY = child.y + childRadius;
 
   context.strokeStyle = parent.color || '#3B82F6';
   context.lineWidth = 3;
@@ -627,7 +653,9 @@ function drawConnectionOnContext(context, parent, child) {
 function drawNodeOnContext(context, node) {
   const x = node.x;
   const y = node.y;
-  const r = node.radius;
+  const r = calculateNodeRadius(node);
+  const fontSize = node.fontSize || 16;
+  const iconSize = fontSize;
 
   context.shadowColor = 'rgba(0, 0, 0, 0.2)';
   context.shadowBlur = 10;
@@ -642,16 +670,16 @@ function drawNodeOnContext(context, node) {
   context.shadowColor = 'transparent';
 
   context.fillStyle = 'white';
-  context.font = `${node.fontSize}px Arial`;
+  context.font = `${iconSize}px Arial`;
   context.textAlign = 'center';
   context.textBaseline = 'middle';
 
   const icon = node.icon || '💡';
   const text = node.text || 'Node';
 
-  context.fillText(icon, x + r, y + r - 8);
-  context.font = `bold ${node.fontSize - 3}px Arial`;
-  context.fillText(text, x + r, y + r + 12);
+  context.fillText(icon, x + r, y + r - (fontSize / 3));
+  context.font = `bold ${fontSize - 2}px Arial`;
+  context.fillText(text, x + r, y + r + (fontSize / 2.5));
 }
 
 // Initialize
