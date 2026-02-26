@@ -392,21 +392,31 @@ function drawNode(node, isSelected) {
   const icon = node.icon || '💡';
   const text = node.text || 'Node';
 
-  // Draw icon
-  ctx.font = `${iconSize}px Arial`;
-  ctx.fillText(icon, x + r, y + r - fontSize / 2 - 10);
-  
-  // Draw multi-line text with wrapping
+  // Prepare text lines first to calculate layout
   ctx.font = `bold ${fontSize - 2}px Arial`;
   const maxTextWidth = r * 1.6; // Text width within circle
   const lines = wrapText(text, maxTextWidth, fontSize, ctx);
   const lineHeight = (fontSize - 2) * 1.2;
-  const totalTextHeight = lines.length * lineHeight;
-  let startY = y + r - totalTextHeight / 2 + fontSize / 2;
-  
+  const textTotalHeight = lines.length * lineHeight;
+
+  // Calculate total content height: icon + spacing + text lines
+  const iconSize = fontSize;
+  const iconSpacing = 8;
+  const totalContentHeight = iconSize + iconSpacing + textTotalHeight;
+
+  // Position everything centered vertically in the node
+  const contentStartY = y + r - totalContentHeight / 2;
+
+  // Draw icon at top
+  ctx.font = `${iconSize}px Arial`;
+  ctx.fillText(icon, x + r, contentStartY);
+
+  // Draw text below icon
+  ctx.font = `bold ${fontSize - 2}px Arial`;
+  let textStartY = contentStartY + iconSize + iconSpacing;
   for (const line of lines) {
-    ctx.fillText(line, x + r, startY);
-    startY += lineHeight;
+    ctx.fillText(line, x + r, textStartY);
+    textStartY += lineHeight;
   }
 }
 
@@ -739,21 +749,31 @@ function drawNodeOnContext(context, node) {
   const icon = node.icon || '💡';
   const text = node.text || 'Node';
 
-  // Draw icon
-  context.font = `${iconSize}px Arial`;
-  context.fillText(icon, x + r, y + r - fontSize / 2 - 10);
-  
-  // Draw multi-line text with wrapping
+  // Prepare text lines first to calculate layout
   context.font = `bold ${fontSize - 2}px Arial`;
   const maxTextWidth = r * 1.6;
   const lines = wrapText(text, maxTextWidth, fontSize, context);
   const lineHeight = (fontSize - 2) * 1.2;
-  const totalTextHeight = lines.length * lineHeight;
-  let startY = y + r - totalTextHeight / 2 + fontSize / 2;
-  
+  const textTotalHeight = lines.length * lineHeight;
+
+  // Calculate total content height: icon + spacing + text lines
+  const iconSize = fontSize;
+  const iconSpacing = 8;
+  const totalContentHeight = iconSize + iconSpacing + textTotalHeight;
+
+  // Position everything centered vertically in the node
+  const contentStartY = y + r - totalContentHeight / 2;
+
+  // Draw icon at top
+  context.font = `${iconSize}px Arial`;
+  context.fillText(icon, x + r, contentStartY);
+
+  // Draw text below icon
+  context.font = `bold ${fontSize - 2}px Arial`;
+  let textStartY = contentStartY + iconSize + iconSpacing;
   for (const line of lines) {
-    context.fillText(line, x + r, startY);
-    startY += lineHeight;
+    context.fillText(line, x + r, textStartY);
+    textStartY += lineHeight;
   }
 }
 
