@@ -27,7 +27,7 @@ const COLORS = [
 ];
 
 async function checkAuth() {
-  const response = await fetch('/api/user');
+  const response = await fetch('/api/user', { credentials: 'include' });
   const data = await response.json();
 
   if (!data.authenticated) {
@@ -48,7 +48,7 @@ async function initializeEditor() {
   }
 
   try {
-    const response = await fetch(`/api/projects/${projectId}/mindmaps/${mindmapId}`);
+    const response = await fetch(`/api/projects/${projectId}/mindmaps/${mindmapId}`, { credentials: 'include' });
     const data = await response.json();
     currentMindmap = data.mindmap;
     currentProject = projectId;
@@ -631,6 +631,7 @@ async function saveMindmap() {
     const response = await fetch(`/api/projects/${currentProject}/mindmaps/${currentMindmap.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ nodes: currentMindmap.nodes })
     });
 

@@ -3,7 +3,7 @@ let currentProject = null;
 let workspace = null;
 
 async function checkAuth() {
-  const response = await fetch('/api/user');
+  const response = await fetch('/api/user', { credentials: 'include' });
   const data = await response.json();
   
   if (!data.authenticated) {
@@ -23,7 +23,7 @@ async function loadProject() {
   }
   
   try {
-    const response = await fetch('/api/workspace');
+    const response = await fetch('/api/workspace', { credentials: 'include' });
     const data = await response.json();
     workspace = data.workspace;
     
@@ -93,6 +93,7 @@ async function createMindmap() {
     const response = await fetch(`/api/projects/${currentProject.id}/mindmaps`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ name })
     });
     
@@ -111,7 +112,8 @@ async function deleteMindmap(mindmapId) {
   
   try {
     const response = await fetch(`/api/projects/${currentProject.id}/mindmaps/${mindmapId}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      credentials: 'include'
     });
     
     const data = await response.json();
@@ -152,7 +154,7 @@ document.getElementById('backBtn').addEventListener('click', () => {
 });
 
 document.getElementById('logoutBtn').addEventListener('click', async () => {
-  await fetch('/api/logout', { method: 'POST' });
+  await fetch('/api/logout', { method: 'POST', credentials: 'include' });
   window.location.href = '/';
 });
 

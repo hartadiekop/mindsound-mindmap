@@ -3,7 +3,7 @@ let workspace = null;
 let currentEditingProject = null;
 
 async function checkAuth() {
-  const response = await fetch('/api/user');
+  const response = await fetch('/api/user', { credentials: 'include' });
   const data = await response.json();
   
   if (!data.authenticated) {
@@ -17,7 +17,7 @@ async function checkAuth() {
 
 async function loadWorkspace() {
   try {
-    const response = await fetch('/api/workspace');
+    const response = await fetch('/api/workspace', { credentials: 'include' });
     const data = await response.json();
     workspace = data.workspace;
     renderProjects();
@@ -87,6 +87,7 @@ async function createProject() {
     const response = await fetch('/api/projects', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ name })
     });
     
@@ -105,7 +106,8 @@ async function deleteProject(projectId) {
   
   try {
     const response = await fetch(`/api/projects/${projectId}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      credentials: 'include'
     });
     
     const data = await response.json();
@@ -174,7 +176,7 @@ document.getElementById('cancelRenameBtn').addEventListener('click', closeRename
 document.getElementById('saveRenameBtn').addEventListener('click', saveRenamedProject);
 
 document.getElementById('logoutBtn').addEventListener('click', async () => {
-  await fetch('/api/logout', { method: 'POST' });
+  await fetch('/api/logout', { method: 'POST', credentials: 'include' });
   window.location.href = '/';
 });
 

@@ -16,23 +16,36 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Determine if running behind HTTPS proxy (Cloudflare Tunnel)
-const isHttpsProxy = process.env.NODE_ENV === 'production' || 
-                      process.env.HTTPS === 'true' ||
-                      process.env.PROXY === 'true';
+// Auto-detect if behind HTTPS proxy by checking headers
+app.use((req, res, next) => {
+  // Detect Cloudflare or other HTTPS proxies
+  const isHttpsProxy = 
+    process.env.NODE_ENV === 'production' || 
+    process.env.HTTPS === 'true' ||
+    process.env.PROXY === 'true' ||
+    req.get('cf-ray') ||  // Cloudflare Ray ID
+    req.get('x-forwarded-proto') === 'https';
+  
+  // Store for later use
+  req.app.isHttpsProxy = isHttpsProxy;
+  next();
+});
 
 // Session configuration - works with both local http and https via proxy
-app.use(session({
+const sessionConfig = {
   secret: 'mindsound-secret-key',
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: true,  // Important: allow uninitialized sessions
+  name: 'sessionId',  // Explicit session name
   cookie: { 
-    secure: isHttpsProxy,  // true for Cloudflare/reverse proxy, false for local dev
     httpOnly: true,
     sameSite: 'lax',
-    maxAge: 24 * 60 * 60 * 1000 
+    maxAge: 24 * 60 * 60 * 1000,
+    secure: false  // Will be set to true by proxy trust
   }
-}));
+};
+
+app.use(session(sessionConfig));
 
 // Ensure data directories exist
 const dataDir = path.join(__dirname, 'data');
