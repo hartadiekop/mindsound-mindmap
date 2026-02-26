@@ -230,21 +230,66 @@ function findNodeAtPosition(x, y) {
   return null;
 }
 
+function wrapText(text, maxWidth, fontSize) {
+  // Helper function to calculate text lines with wrapping
+  const words = text.split(' ');
+  const lines = [];
+  let currentLine = '';
+  
+  for (const word of words) {
+    const testLine = currentLine ? currentLine + ' ' + word : word;
+    const metrics = ctx.measureText(testLine);
+    
+    if (metrics.width > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  
+  return lines;
+}
+
 function calculateNodeRadius(node) {
-  // Calculate radius based on font size and text length
-  const basePadding = 15;
+  // Calculate radius based on font size, text length, and multi-line support
   const fontSize = node.fontSize || 16;
-  const textLength = (node.text || 'Node').length;
+  const text = node.text || 'Node';
   
-  // Minimum radius based on font size
-  const minRadius = fontSize + 20;
+  // Base padding
+  const basePadding = 15;
+  const iconSize = fontSize;
   
-  // Expand radius based on text length
-  const textWidth = textLength * (fontSize * 0.35); // Approximate character width
-  const requiredRadius = Math.max(minRadius, textWidth / 2 + basePadding);
+  // Minimum radius: at least large enough for icon + padding
+  // Increased significantly to accommodate larger font sizes (up to 40px)
+  const minRadius = Math.max(fontSize + 25, 50);
   
-  // Ensure minimum of 35px and cap at reasonable size
-  return Math.max(35, Math.min(requiredRadius, 100));
+  // Calculate needed width based on text
+  // Estimate: average character width is about 0.5 * fontSize
+  const avgCharWidth = fontSize * 0.5;
+  const maxTextWidth = text.length * avgCharWidth;
+  
+  // Calculate needed height based on potential line wrapping
+  // For multi-line text, we need more vertical space
+  const estimatedLineWidth = fontSize * 8; // About 8-10 characters per line
+  const estimatedLines = Math.ceil(text.length / (estimatedLineWidth / avgCharWidth));
+  
+  // Total height needed: icon + spacing + (text lines * line height)
+  const lineHeight = fontSize * 1.2;
+  const totalHeight = iconSize + 10 + (estimatedLines * lineHeight) + basePadding;
+  
+  // Radius needs to fit both width and height
+  const radiusFromWidth = Math.max(maxTextWidth / 2 + basePadding, 35);
+  const radiusFromHeight = Math.max(totalHeight / 2, 35);
+  
+  const requiredRadius = Math.max(radiusFromWidth, radiusFromHeight, minRadius);
+  
+  // Cap at reasonable size, but allow larger for big text
+  return Math.min(requiredRadius, 150);
 }
 
 function draw() {
@@ -308,7 +353,7 @@ function drawNode(node, isSelected) {
   const y = node.y;
   const r = calculateNodeRadius(node);
   const fontSize = node.fontSize || 16;
-  const iconSize = fontSize; // Icon size = font size
+  const iconSize = fontSize;
 
   // Shadow
   ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
@@ -335,24 +380,34 @@ function drawNode(node, isSelected) {
 
   // Draw icon and text
   ctx.fillStyle = 'white';
-  ctx.font = `${iconSize}px Arial`;
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.textBaseline = 'top';
 
   const icon = node.icon || '💡';
   const text = node.text || 'Node';
 
-  // Draw icon centered
-  ctx.fillText(icon, x + r, y + r - (fontSize / 3));
+  // Draw icon
+  ctx.font = `${iconSize}px Arial`;
+  ctx.fillText(icon, x + r, y + r - fontSize / 2 - 10);
   
-  // Draw text below icon
+  // Draw multi-line text with wrapping
   ctx.font = `bold ${fontSize - 2}px Arial`;
-  ctx.fillText(text, x + r, y + r + (fontSize / 2.5));
+  const maxTextWidth = r * 1.6; // Text width within circle
+  const lines = wrapText(text, maxTextWidth, fontSize);
+  const lineHeight = (fontSize - 2) * 1.2;
+  const totalTextHeight = lines.length * lineHeight;
+  let startY = y + r - totalTextHeight / 2 + fontSize / 2;
+  
+  for (const line of lines) {
+    ctx.fillText(line, x + r, startY);
+    startY += lineHeight;
+  }
 }
 
 function drawGrid() {
   ctx.strokeStyle = '#f0f0f0';
   ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.3; // More transparent grid
   const gridSize = 40;
 
   for (let x = panX % gridSize; x < canvas.width; x += gridSize) {
@@ -368,6 +423,8 @@ function drawGrid() {
     ctx.lineTo(canvas.width, y);
     ctx.stroke();
   }
+  
+  ctx.globalAlpha = 1; // Reset alpha
 }
 
 function setupUIListeners() {
@@ -670,16 +727,28 @@ function drawNodeOnContext(context, node) {
   context.shadowColor = 'transparent';
 
   context.fillStyle = 'white';
-  context.font = `${iconSize}px Arial`;
   context.textAlign = 'center';
-  context.textBaseline = 'middle';
+  context.textBaseline = 'top';
 
   const icon = node.icon || '💡';
   const text = node.text || 'Node';
 
-  context.fillText(icon, x + r, y + r - (fontSize / 3));
+  // Draw icon
+  context.font = `${iconSize}px Arial`;
+  context.fillText(icon, x + r, y + r - fontSize / 2 - 10);
+  
+  // Draw multi-line text with wrapping
   context.font = `bold ${fontSize - 2}px Arial`;
-  context.fillText(text, x + r, y + r + (fontSize / 2.5));
+  const maxTextWidth = r * 1.6;
+  const lines = wrapText(text, maxTextWidth, fontSize);
+  const lineHeight = (fontSize - 2) * 1.2;
+  const totalTextHeight = lines.length * lineHeight;
+  let startY = y + r - totalTextHeight / 2 + fontSize / 2;
+  
+  for (const line of lines) {
+    context.fillText(line, x + r, startY);
+    startY += lineHeight;
+  }
 }
 
 // Initialize
