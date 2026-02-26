@@ -69,6 +69,22 @@
       cursor: pointer;
     }
 
+    /* Backdrop for sidebar overlay */
+    .sidebar-backdrop {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.3);
+      z-index: 39;
+    }
+
+    .sidebar-backdrop.active {
+      display: block;
+    }
+
     .emoji-picker {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -178,34 +194,37 @@
       border: none;
     }
 
-    /* Desktop - Sidebar visible */
+    /* Sidebar hidden by default on all devices */
+    .sidebar {
+      transform: translateX(100%);
+      position: fixed;
+      right: 0;
+      top: 64px;
+      height: calc(100vh - 64px);
+      width: 320px;
+      transition: transform 0.3s ease;
+      z-index: 40;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Sidebar visible when active */
+    .sidebar.active {
+      transform: translateX(0);
+    }
+
+    /* Desktop view - wider sidebar */
     @media (min-width: 769px) {
       .sidebar {
-        display: flex !important;
-        position: relative;
-        transform: none;
-        width: 320px;
-        flex-shrink: 0;
-      }
-
-      #sidebarToggle {
-        display: none !important;
+        width: 350px;
       }
     }
 
-    /* Mobile - Sidebar hidden by default */
+    /* Mobile view - full width sidebar */
     @media (max-width: 768px) {
       .sidebar {
-        transform: translateX(-100%);
-        position: absolute;
-        height: 100%;
-        width: 100%;
-        transition: transform 0.3s;
-        z-index: 40;
-      }
-
-      .sidebar.active {
-        transform: translateX(0);
+        width: 80vw;
+        max-width: 350px;
       }
     }
   </style>
@@ -246,17 +265,20 @@
     </div>
 
     <!-- Mobile Menu Toggle -->
-    <button id="sidebarToggle" class="md:hidden px-4 py-2 rounded hover:bg-gray-100 transition">
+    <button id="sidebarToggle" class="px-4 py-2 rounded hover:bg-gray-100 transition text-xl">
       <i class="fas fa-bars"></i>
     </button>
   </div>
 
-  <div style="display: flex; height: calc(100vh - 64px);">
+  <div style="display: flex; height: calc(100vh - 64px); position: relative;">
     <!-- Canvas -->
     <canvas id="canvas" style="flex: 1; background: white; border: 1px solid #eee;"></canvas>
 
-    <!-- Right Sidebar -->
-    <div id="sidebar" class="sidebar flex flex-col" style="width: 320px; flex-shrink: 0; background: white; box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1); overflow-y: auto;">
+    <!-- Sidebar Backdrop (for mobile) -->
+    <div id="sidebarBackdrop" class="sidebar-backdrop" onclick="document.getElementById('sidebar').classList.remove('active'); this.classList.remove('active');"></div>
+
+    <!-- Right Sidebar (Fixed Overlay) -->
+    <div id="sidebar" class="sidebar">
       <!-- Node Properties Panel -->
       <div class="panel">
         <div class="panel-title">

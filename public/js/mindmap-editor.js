@@ -370,6 +370,22 @@ function setupUIListeners() {
     document.getElementById('emojiModal').classList.remove('hidden');
   });
   document.getElementById('autoColorBtn').addEventListener('click', autoColorNode);
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      // Close sidebar
+      const sidebar = document.getElementById('sidebar');
+      const backdrop = document.getElementById('sidebarBackdrop');
+      if (sidebar.classList.contains('active')) {
+        sidebar.classList.remove('active');
+        backdrop.classList.remove('active');
+      }
+      // Close modals
+      document.getElementById('emojiModal').classList.add('hidden');
+      document.getElementById('exportModal').classList.add('hidden');
+    }
+  });
 }
 
 function addNode() {
@@ -515,7 +531,9 @@ function resetView() {
 
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebarBackdrop');
   sidebar.classList.toggle('active');
+  backdrop.classList.toggle('active');
 }
 
 function selectEmoji(emoji) {
