@@ -946,6 +946,9 @@ function renderKanbanBoard() {
         <div class="kanban-card-footer">
           <span style="color: #999;">${card.id.substring(0, 8)}</span>
           <div class="kanban-card-actions">
+            <button onclick="event.stopPropagation(); openKanbanLinkModal('${column.id}', '${card.id}')" title="${card.docLink ? 'Edit document link' : 'Add document link'}" style="${card.docLink ? 'color: #667eea;' : ''}">
+              <i class="fas fa-link"></i>
+            </button>
             <button onclick="event.stopPropagation(); deleteKanbanCard('${column.id}', '${card.id}')" title="Delete">
               <i class="fas fa-trash"></i>
             </button>
@@ -1155,6 +1158,96 @@ function reorderKanbanColumns(sourceIndex, targetIndex) {
   
   renderKanbanBoard();
   saveHistory();
+}
+
+function openKanbanLinkModal(columnId, cardId) {
+  if (!selectedNode || !selectedNode.kanban) return;
+  
+  const column = selectedNode.kanban.columns.find(c => c.id === columnId);
+  if (!column) return;
+  
+  const card = column.cards.find(c => c.id === cardId);
+  if (!card) return;
+  
+  // Store current card info for the modal
+  window.currentCardLink = { columnId, cardId, url: card.docLink || '' };
+  
+  const modal = document.getElementById('kanbanLinkModal');
+  const linkInput = document.getElementById('kanbanLinkInput');
+  const linkPreview = document.getElementById('kanbanLinkPreview');
+  
+  linkInput.value = card.docLink || '';
+  
+  if (card.docLink) {
+    linkPreview.innerHTML = `<a href="${card.docLink}" target="_blank" style="color: #667eea; text-decoration: underline; word-break: break-all;">${card.docLink}</a>`;
+    linkPreview.style.display = 'block';
+  } else {
+    linkPreview.style.display = 'none';
+  }
+  
+  modal.classList.remove('hidden');
+  linkInput.focus();
+}
+
+function closeKanbanLinkModal() {
+  document.getElementById('kanbanLinkModal').classList.add('hidden');
+  window.currentCardLink = null;
+}
+
+function saveKanbanCardLink() {
+  if (!window.currentCardLink) return;
+  
+  const { columnId, cardId } = window.currentCardLink;
+  const url = document.getElementById('kanbanLinkInput').value.trim();
+  
+  if (!selectedNode || !selectedNode.kanban) return;
+  
+  const column = selectedNode.kanban.columns.find(c => c.id === columnId);
+  if (!column) return;
+  
+  const card = column.cards.find(c => c.id === cardId);
+  if (!card) return;
+  
+  // Validate URL if provided
+  if (url && !isValidUrl(url)) {
+    alert('Please enter a valid URL (must start with http:// or https://)');
+    return;
+  }
+  
+  card.docLink = url || null;
+  
+  closeKanbanLinkModal();
+  renderKanbanBoard();
+  saveHistory();
+}
+
+function removeKanbanCardLink() {
+  if (!window.currentCardLink) return;
+  
+  const { columnId, cardId } = window.currentCardLink;
+  
+  if (!selectedNode || !selectedNode.kanban) return;
+  
+  const column = selectedNode.kanban.columns.find(c => c.id === columnId);
+  if (!column) return;
+  
+  const card = column.cards.find(c => c.id === cardId);
+  if (!card) return;
+  
+  card.docLink = null;
+  
+  closeKanbanLinkModal();
+  renderKanbanBoard();
+  saveHistory();
+}
+
+function isValidUrl(string) {
+  try {
+    new URL(string);
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 // Initialize

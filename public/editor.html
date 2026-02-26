@@ -537,6 +537,37 @@
       </div>
     </div>
   </div>
+
+  <!-- Kanban Card Link Modal -->
+  <div id="kanbanLinkModal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full">
+      <h3 class="text-xl font-bold text-gray-800 mb-4">Document Link</h3>
+      
+      <label class="block text-sm font-semibold text-gray-700 mb-2">
+        <i class="fas fa-link mr-2"></i>URL
+      </label>
+      <input id="kanbanLinkInput" type="text" class="input-field" placeholder="https://docs.google.com/... or https://..." style="margin-bottom: 12px;">
+      
+      <div id="kanbanLinkPreview" style="display: none; margin-bottom: 12px; padding: 8px; background: #f0f0f0; border-radius: 6px; word-break: break-all; font-size: 12px;"></div>
+      
+      <p class="text-xs text-gray-600 mb-4">
+        <i class="fas fa-info-circle mr-1"></i>Paste links to Google Docs, Google Sheets, Microsoft Office 365, or any other documents.
+      </p>
+      
+      <div class="flex gap-2 flex-col">
+        <button onclick="saveKanbanCardLink()" class="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition">
+          <i class="fas fa-save mr-2"></i>Save Link
+        </button>
+        <button onclick="removeKanbanCardLink()" class="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded transition">
+          <i class="fas fa-trash mr-2"></i>Remove Link
+        </button>
+        <button onclick="closeKanbanLinkModal()" class="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="emojiModal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full">
       <h3 class="text-xl font-bold text-gray-800 mb-4">Select Emoji</h3>
