@@ -8,17 +8,28 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 const PORT = 11888;
 
+// Trust proxy for Cloudflare Tunnel and other reverse proxies
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Determine if running behind HTTPS proxy (Cloudflare Tunnel)
+const isHttpsProxy = process.env.NODE_ENV === 'production' || 
+                      process.env.HTTPS === 'true' ||
+                      process.env.PROXY === 'true';
+
+// Session configuration - works with both local http and https via proxy
 app.use(session({
   secret: 'mindsound-secret-key',
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: false,
   cookie: { 
-    secure: false,
+    secure: isHttpsProxy,  // true for Cloudflare/reverse proxy, false for local dev
+    httpOnly: true,
+    sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000 
   }
 }));
