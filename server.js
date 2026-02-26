@@ -32,20 +32,30 @@ app.use((req, res, next) => {
 });
 
 // Session configuration - works with both local http and https via proxy
+// Use a function to dynamically set cookie secure based on protocol
 const sessionConfig = {
   secret: 'mindsound-secret-key',
   resave: false,
-  saveUninitialized: true,  // Important: allow uninitialized sessions
+  saveUninitialized: false,
   name: 'sessionId',  // Explicit session name
   cookie: { 
     httpOnly: true,
     sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000,
-    secure: false  // Will be set to true by proxy trust
+    secure: 'auto'  // Automatically detect based on protocol
   }
 };
 
 app.use(session(sessionConfig));
+
+// After session middleware, fix cookie secure flag for proxied HTTPS
+app.use((req, res, next) => {
+  // If we detect HTTPS proxy, ensure session cookie is secure
+  if (req.app.isHttpsProxy && req.sessionID) {
+    req.session.cookie.secure = true;
+  }
+  next();
+});
 
 // Ensure data directories exist
 const dataDir = path.join(__dirname, 'data');
@@ -91,30 +101,47 @@ createBackup(); // Initial backup on startup
 
 // Routes
 app.get('/', (req, res) => {
+  console.log(`[ROOT] Session ID: ${req.sessionID}, userId: ${req.session.userId}`);
+  console.log(`[ROOT] Session content:`, { userId: req.session.userId, username: req.session.username, loggedIn: req.session.loggedIn });
+  
   if (req.session.userId) {
+    console.log('[ROOT] Serving dashboard.html');
     res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
   } else {
+    console.log('[ROOT] Serving login.html');
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
   }
 });
 
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
-  const users = JSON.parse(fs.readFileSync(usersFile, 'utf-8'));
+  console.log(`[LOGIN] Attempt: username=${username}`);
   
+  const users = JSON.parse(fs.readFileSync(usersFile, 'utf-8'));
   const user = users.users.find(u => u.username === username && u.password === password);
   
   if (user) {
+    console.log(`[LOGIN] Success for user: ${username}, ID: ${user.id}`);
     req.session.userId = user.id;
     req.session.username = user.username;
-    // Explicitly save session before responding
+    req.session.loggedIn = true;
+    
+    console.log(`[LOGIN] Session ID: ${req.sessionID}`);
+    console.log(`[LOGIN] Session data set: userId=${req.session.userId}`);
+    
+    // Explicitly save session with callback
     req.session.save((err) => {
       if (err) {
-        return res.json({ success: false, message: 'Session error' });
+        console.error('[LOGIN] Session save error:', err);
+        return res.status(500).json({ success: false, message: 'Session error' });
       }
+      console.log(`[LOGIN] Session saved successfully. Cookie settings:`, req.session.cookie);
+      // Send response with explicit headers for Cloudflare
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.json({ success: true, message: 'Login successful' });
     });
   } else {
+    console.log(`[LOGIN] Failed: Invalid credentials for ${username}`);
     res.json({ success: false, message: 'Invalid credentials' });
   }
 });
@@ -125,11 +152,23 @@ app.post('/api/logout', (req, res) => {
 });
 
 app.get('/api/user', (req, res) => {
+  console.log(`[API/USER] Session ID: ${req.sessionID}, userId: ${req.session.userId}`);
+  
   if (!req.session.userId) {
+    console.log('[API/USER] No session - returning unauthenticated');
     return res.json({ authenticated: false });
   }
+  
   const users = JSON.parse(fs.readFileSync(usersFile, 'utf-8'));
   const user = users.users.find(u => u.id === req.session.userId);
+  
+  if (!user) {
+    console.log(`[API/USER] User not found for ID: ${req.session.userId}`);
+    req.session.destroy();
+    return res.json({ authenticated: false });
+  }
+  
+  console.log(`[API/USER] Authenticated: ${user.username}`);
   res.json({ authenticated: true, user: { id: user.id, username: user.username } });
 });
 

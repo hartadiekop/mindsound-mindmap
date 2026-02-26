@@ -139,13 +139,35 @@
         });
 
         const data = await response.json();
+        console.log('Login response:', data);
+        
         if (data.success) {
-          window.location.href = '/';
+          // Small delay to ensure session is persisted
+          setTimeout(async () => {
+            // Verify session is set by checking /api/user
+            try {
+              const userCheck = await fetch('/api/user', { credentials: 'include' });
+              const userData = await userCheck.json();
+              console.log('User check:', userData);
+              
+              if (userData.authenticated) {
+                window.location.href = '/';
+              } else {
+                errorText.textContent = 'Session verification failed. Please try again.';
+                errorDiv.classList.remove('hidden');
+              }
+            } catch (err) {
+              console.error('Session check error:', err);
+              // Still redirect anyway
+              window.location.href = '/';
+            }
+          }, 300);
         } else {
           errorText.textContent = data.message;
           errorDiv.classList.remove('hidden');
         }
       } catch (error) {
+        console.error('Login error:', error);
         errorText.textContent = 'Connection error. Please try again.';
         errorDiv.classList.remove('hidden');
       }
