@@ -15,6 +15,12 @@ let isDrawing = false;
 let history = [];
 let historyIndex = -1;
 
+// Auto-save state
+let autoSaveTimer = null;
+let hasUnsavedChanges = false;
+let lastSaveTime = null;
+const AUTO_SAVE_INTERVAL = 2 * 60 * 1000; // 2 minutes in milliseconds
+
 const COLORS = [
   '#3B82F6', // Blue
   '#F87171', // Red
@@ -78,6 +84,9 @@ async function initializeEditor() {
 
     // Save initial state to history
     saveHistory();
+    
+    // Initialize auto-save
+    initializeAutoSave();
   } catch (error) {
     console.error('Error loading mindmap:', error);
     window.location.href = '/';
@@ -155,6 +164,7 @@ function handleCanvasMouseMove(e) {
 function handleCanvasMouseUp() {
   if (isDrawing) {
     saveHistory();
+    markUnsavedChanges();
   }
   isDrawing = false;
   isDragging = false;
@@ -542,6 +552,7 @@ function addNode() {
   selectedNode = newNode;
   updateSidebar();
   saveHistory();
+  markUnsavedChanges();
   draw();
 }
 
@@ -555,12 +566,14 @@ function deleteSelectedNode() {
   selectedNode = null;
   updateSidebar();
   saveHistory();
+  markUnsavedChanges();
   draw();
 }
 
 function updateNodeText(e) {
   if (selectedNode) {
     selectedNode.text = e.target.value;
+    markUnsavedChanges();
     draw();
   }
 }
@@ -568,6 +581,7 @@ function updateNodeText(e) {
 function updateNodeColor(e) {
   if (selectedNode) {
     selectedNode.color = e.target.value;
+    markUnsavedChanges();
     draw();
   }
 }
@@ -576,6 +590,7 @@ function updateFontSize(e) {
   if (selectedNode) {
     selectedNode.fontSize = parseInt(e.target.value);
     document.getElementById('fontSizeDisplay').textContent = e.target.value + 'px';
+    markUnsavedChanges();
     draw();
   }
 }
@@ -583,6 +598,7 @@ function updateFontSize(e) {
 function updateNodeNotes(e) {
   if (selectedNode) {
     selectedNode.notes = e.target.value;
+    markUnsavedChanges();
   }
 }
 
@@ -590,6 +606,7 @@ function autoColorNode() {
   if (selectedNode) {
     selectedNode.color = COLORS[Math.floor(Math.random() * COLORS.length)];
     document.getElementById('nodeColor').value = selectedNode.color;
+    markUnsavedChanges();
     draw();
   }
 }
@@ -628,6 +645,7 @@ function updateSidebar() {
 
 async function saveMindmap() {
   try {
+    updateAutoSaveStatus('saving');
     const response = await fetch(`/api/projects/${currentProject}/mindmaps/${currentMindmap.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -637,12 +655,99 @@ async function saveMindmap() {
 
     const data = await response.json();
     if (data.success) {
+      hasUnsavedChanges = false;
+      lastSaveTime = new Date();
+      updateAutoSaveStatus('saved');
       alert('Mindmap saved successfully!');
     }
   } catch (error) {
     console.error('Error saving mindmap:', error);
+    updateAutoSaveStatus('error');
     alert('Error saving mindmap');
   }
+}
+
+// Auto-save version (silent, no alert)
+async function autoSaveMindmap() {
+  // Only save if there are unsaved changes
+  if (!hasUnsavedChanges) return;
+  
+  try {
+    updateAutoSaveStatus('saving');
+    const response = await fetch(`/api/projects/${currentProject}/mindmaps/${currentMindmap.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ nodes: currentMindmap.nodes })
+    });
+
+    const data = await response.json();
+    if (data.success) {
+      hasUnsavedChanges = false;
+      lastSaveTime = new Date();
+      updateAutoSaveStatus('saved');
+      console.log('[AUTO-SAVE] Mindmap auto-saved successfully');
+    }
+  } catch (error) {
+    console.error('[AUTO-SAVE] Error:', error);
+    updateAutoSaveStatus('error');
+  }
+}
+
+// Update UI with auto-save status
+function updateAutoSaveStatus(status) {
+  const statusEl = document.getElementById('autoSaveStatus');
+  const textEl = document.getElementById('lastSavedText');
+  const iconEl = statusEl?.querySelector('i');
+  
+  if (!statusEl) return;
+  
+  switch(status) {
+    case 'saving':
+      iconEl.className = 'fas fa-spinner fa-spin text-blue-500';
+      textEl.textContent = 'Saving...';
+      break;
+    case 'saved':
+      iconEl.className = 'fas fa-check-circle text-green-500';
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      textEl.textContent = `Last saved: ${hours}:${minutes}`;
+      break;
+    case 'error':
+      iconEl.className = 'fas fa-exclamation-circle text-red-500';
+      textEl.textContent = 'Save failed';
+      break;
+    default:
+      iconEl.className = 'fas fa-check-circle text-green-500';
+      textEl.textContent = 'All saved';
+  }
+}
+
+// Initialize auto-save timer
+function initializeAutoSave() {
+  // Set initial state
+  updateAutoSaveStatus('saved');
+  lastSaveTime = new Date();
+  
+  // Clear any existing timer
+  if (autoSaveTimer) clearInterval(autoSaveTimer);
+  
+  // Set up auto-save every 2 minutes
+  autoSaveTimer = setInterval(() => {
+    if (hasUnsavedChanges) {
+      console.log('[AUTO-SAVE] Triggering auto-save...');
+      autoSaveMindmap();
+    }
+  }, AUTO_SAVE_INTERVAL);
+  
+  console.log('[AUTO-SAVE] Initialized with 2-minute interval');
+}
+
+// Mark that changes have been made
+function markUnsavedChanges() {
+  hasUnsavedChanges = true;
+  updateAutoSaveStatus('saving');
 }
 
 function saveHistory() {
@@ -657,6 +762,7 @@ function undo() {
     currentMindmap.nodes = JSON.parse(history[historyIndex]);
     selectedNode = null;
     updateSidebar();
+    markUnsavedChanges();
     draw();
   }
 }
@@ -667,6 +773,7 @@ function redo() {
     currentMindmap.nodes = JSON.parse(history[historyIndex]);
     selectedNode = null;
     updateSidebar();
+    markUnsavedChanges();
     draw();
   }
 }
@@ -689,6 +796,7 @@ function selectEmoji(emoji) {
   if (selectedNode) {
     selectedNode.icon = emoji;
     document.getElementById('selectEmojiBtn').textContent = emoji;
+    markUnsavedChanges();
     closeEmojiModal();
     draw();
   }
@@ -1024,6 +1132,7 @@ function addKanbanCard(columnId) {
     });
     renderKanbanBoard();
     saveHistory();
+    markUnsavedChanges();
   }
 }
 
@@ -1035,6 +1144,7 @@ function deleteKanbanCard(columnId, cardId) {
     column.cards = column.cards.filter(c => c.id !== cardId);
     renderKanbanBoard();
     saveHistory();
+    markUnsavedChanges();
   }
 }
 
@@ -1051,6 +1161,7 @@ function moveKanbanCard(sourceColumnId, targetColumnId, cardId) {
       targetColumn.cards.push(card);
       renderKanbanBoard();
       saveHistory();
+      markUnsavedChanges();
     }
   }
 }
@@ -1069,6 +1180,7 @@ function addKanbanColumn() {
   
   renderKanbanBoard();
   saveHistory();
+  markUnsavedChanges();
 }
 
 function deleteKanbanColumn(columnId) {
@@ -1078,6 +1190,7 @@ function deleteKanbanColumn(columnId) {
     selectedNode.kanban.columns = selectedNode.kanban.columns.filter(c => c.id !== columnId);
     renderKanbanBoard();
     saveHistory();
+    markUnsavedChanges();
   }
 }
 
@@ -1102,6 +1215,7 @@ function editKanbanColumnTitle(columnId, titleElement) {
     column.title = newTitle;
     renderKanbanBoard();
     saveHistory();
+    markUnsavedChanges();
   };
   
   inputEl.addEventListener('blur', saveEdit);
@@ -1138,6 +1252,7 @@ function editKanbanCardTitle(columnId, cardId, titleElement) {
     card.title = newTitle;
     renderKanbanBoard();
     saveHistory();
+    markUnsavedChanges();
   };
   
   inputEl.addEventListener('blur', saveEdit);
@@ -1159,6 +1274,7 @@ function reorderKanbanColumns(sourceIndex, targetIndex) {
   
   renderKanbanBoard();
   saveHistory();
+  markUnsavedChanges();
 }
 
 function openKanbanLinkModal(columnId, cardId) {
@@ -1220,6 +1336,7 @@ function saveKanbanCardLink() {
   closeKanbanLinkModal();
   renderKanbanBoard();
   saveHistory();
+  markUnsavedChanges();
 }
 
 function removeKanbanCardLink() {
@@ -1240,6 +1357,7 @@ function removeKanbanCardLink() {
   closeKanbanLinkModal();
   renderKanbanBoard();
   saveHistory();
+  markUnsavedChanges();
 }
 
 function isValidUrl(string) {
