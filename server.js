@@ -99,6 +99,14 @@ const createBackup = () => {
 setInterval(createBackup, 24 * 60 * 60 * 1000);
 createBackup(); // Initial backup on startup
 
+// Disable caching for development/testing
+app.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
+
 // Routes
 app.get('/', (req, res) => {
   console.log(`[ROOT] Session ID: ${req.sessionID}, userId: ${req.session.userId}`);
